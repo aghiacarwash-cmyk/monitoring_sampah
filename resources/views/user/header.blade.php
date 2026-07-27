@@ -280,9 +280,11 @@
 
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-    <script type="module">
+   <script type="module">
+
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
         import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging.js";
+
         const firebaseConfig = {
             apiKey: "AIzaSyCYl3EDyuMJmnVtW8vO4GYL_0l0-Gcp6JQ",
             authDomain: "clean-iot-monitoring.firebaseapp.com",
@@ -291,10 +293,61 @@
             messagingSenderId: "733183787328",
             appId: "1:733183787328:web:3b18917e105f22b5007aa5"
         };
+
         const app = initializeApp(firebaseConfig);
         const messaging = getMessaging(app);
+
         Notification.requestPermission().then((permission) => {
+
             if (permission === "granted") {
-                navigator.serviceWorker.register('/firebase-messaging-sw.js').then((registration) => {
-                    getToken(messaging, {
-                        vapidKey: "BNaAmUOo69gtnMTgoYge2WJxBHinqbEih6yy5NVuZcYUrJCY_bJhpi-SEqV3fj-kd6Ce7YTi8a3eK6yZ2-t66aE",
+
+                navigator.serviceWorker.register('/firebase-messaging-sw.js')
+                    .then((registration) => {
+
+                        getToken(messaging, {
+                            vapidKey: "BNaAmUOo69gtnMTgoYge2WJxBHinqbEih6yy5NVuZcYUrJCY_bJhpi-SEqV3fj-kd6Ce7YTi8a3eK6yZ2-t66aE",
+                            serviceWorkerRegistration: registration
+                        })
+                            .then((currentToken) => {
+
+                                if (currentToken) {
+
+                                    fetch('/save-fcm-token', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                                        },
+                                        body: JSON.stringify({
+                                            token: currentToken
+                                        })
+                                    })
+                                        .then(response => response.json())
+                                        .then(data => {
+                                            console.log("Token berhasil disimpan", data);
+                                        })
+                                        .catch(error => {
+                                            console.error(error);
+                                        });
+
+                                    
+
+                                } else {
+
+                                    console.log("Token tidak didapat.");
+
+                                }
+
+                            })
+                            .catch((err) => {
+
+                                console.error("FCM ERROR:", err);
+
+                            });
+
+                    });
+
+            }
+
+        });
+    </script>
