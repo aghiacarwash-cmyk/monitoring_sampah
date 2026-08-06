@@ -181,13 +181,13 @@
                         <label class="font-label-caps text-label-caps text-on-surface-variant uppercase"
                             for="password">Kata Sandi</label>
                         <div class="relative">
-                            <input
+                            <input id="password"
                                 class="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-lg font-body-md text-body-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                                 name="password" placeholder="Masukkan kata sandi" type="password" />
-                            <button
+                            <button id="togglePassword"
                                 class="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-primary transition-colors"
                                 type="button">
-                                <span class="material-symbols-outlined text-body-lg"
+                                <span id="toggleIcon" class="material-symbols-outlined text-body-lg"
                                     data-icon="visibility">visibility</span>
                             </button>
                         </div>
@@ -220,6 +220,19 @@
     <footer class="hidden lg:block py-6 text-center text-on-surface-variant font-body-md">
         <p>© 2026 Clean IoT. Semua Hak Dilindungi.</p>
     </footer>
+
+    <script>
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('toggleIcon');
+
+        togglePassword.addEventListener('click', function () {
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+            toggleIcon.textContent = isPassword ? 'visibility_off' : 'visibility';
+            toggleIcon.setAttribute('data-icon', isPassword ? 'visibility_off' : 'visibility');
+        });
+    </script>
 </body>
 
 </html>
