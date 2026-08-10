@@ -39,24 +39,23 @@ class ContainerApiController extends Controller
             'latitude'      => $request->latitude,
             'longitude'     => $request->longitude,
             'updated_at'    => now(),
-        
-            ]);
+        ]);
 
-            MonitoringLog::create([
-                'waktu' => now(),
-                'kode_container' => $container->kode_containers,
-                'id_kecamatan'   => $container->id_kecamatan,
-                'id_kelurahan'   => $container->id_kelurahan,
-                'persen'         => $request->persen,
-                'baterai'        => $request->baterai,
-                'status'         => $request->status,
-                'latitude'       => $request->latitude,
-                'longitude'      => $request->longitude,
-            ]);
-        
+        MonitoringLog::create([
+            'waktu'          => now(),
+            'kode_container' => $container->kode_containers,
+            'id_kecamatan'   => $container->id_kecamatan,
+            'id_kelurahan'   => $container->id_kelurahan,
+            'persen'         => $request->persen,
+            'baterai'        => $request->baterai,
+            'status'         => $request->status,
+            'latitude'       => $request->latitude,
+            'longitude'      => $request->longitude,
+        ]);
+
         /*
         |--------------------------------------------------------------------------
-        | NOTIFIKASI KONTAINER
+        | NOTIFIKASI KONTAINER (LOGIKA LAMA CEGAH SPAM TETAP DIPAKAI)
         |--------------------------------------------------------------------------
         */
 
@@ -116,7 +115,7 @@ class ContainerApiController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | NOTIFIKASI BATERAI
+        | NOTIFIKASI BATERAI (LOGIKA LAMA CEGAH SPAM TETAP DIPAKAI)
         |--------------------------------------------------------------------------
         */
 
@@ -151,9 +150,15 @@ class ContainerApiController extends Controller
         );
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | METHOD KIRIM NOTIF (DISESUAIKAN UNTUK HIGH PRIORITY WEBPUSH)
+    |--------------------------------------------------------------------------
+    */
     private function kirimNotif($judul, $isi)
     {
         $tokens = User::whereNotNull('fcm_token')
+            ->where('fcm_token', '!=', '')
             ->pluck('fcm_token')
             ->unique();
 
@@ -164,13 +169,28 @@ class ContainerApiController extends Controller
                 $message = CloudMessage::withTarget('token', $token)
                     ->withNotification(
                         Notification::create($judul, $isi)
-                    );
+                    )
+                    ->withWebPushConfig([
+                        'headers' => [
+                            'Urgency' => 'high',
+                        ],
+                        'notification' => [
+                            'title' => $judul,
+                            'body'  => $isi,
+                            'requireInteraction' => true,
+                        ],
+                    ]);
 
                 $this->messaging->send($message);
 
             } catch (\Exception $e) {
 
-                Log::error($e->getMessage());
+                Log::error("FCM Error ({$token}): " . $e->getMessage());
+
+                // Jika token mati/invalid di Firebase, bersihkan otomatis
+                if (str_contains($e->getMessage(), 'Unregistered') || str_contains($e->getMessage(), 'invalid')) {
+                    User::where('fcm_token', $token)->update(['fcm_token' => null]);
+                }
 
             }
 
