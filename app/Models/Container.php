@@ -23,6 +23,10 @@ class Container extends Model
         'notif_terkirim',
         'notif_level',
         'notif_baterai',
+        'notif_sensor1',
+        'notif_sensor2',
+        'notif_sensor3',
+        'notif_sensor4',
         'updated_at',
     ];
 

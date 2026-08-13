@@ -11,8 +11,9 @@
                 Data Riwayat Monitoring
             </h1>
         </div>
+    <livewire:monitoring-log-list />
 
-        <div class="flex justify-between items-center px-6 py-2 border-">
+        <!-- <div class="flex justify-between items-center px-6 py-2 border-">
 
             <table class="w-full text-left border-collapse">
 
@@ -105,7 +106,7 @@
 
             </table>
 
-        </div>
+        </div> -->
 
     </div>
 @endsection

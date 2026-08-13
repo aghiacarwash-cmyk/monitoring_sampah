@@ -11,6 +11,7 @@ use Kreait\Firebase\Messaging\CloudMessage;
 use Kreait\Firebase\Messaging\Notification;
 use Illuminate\Support\Facades\Log;
 use App\Models\MonitoringLog;
+use App\Events\MonitoringUpdated;
 
 class ContainerApiController extends Controller
 {
@@ -53,6 +54,8 @@ class ContainerApiController extends Controller
             'longitude'      => $request->longitude,
         ]);
 
+        event(new MonitoringUpdated($container));
+
         /*
         |--------------------------------------------------------------------------
         | NOTIFIKASI KONTAINER (LOGIKA LAMA CEGAH SPAM TETAP DIPAKAI)
@@ -68,49 +71,24 @@ class ContainerApiController extends Controller
             $levelSekarang = 'hampir_penuh';
         }
 
-        // Reset jika sudah di bawah 80%
         if ($levelSekarang === null) {
-
             if ($levelSebelumnya !== null) {
-                $container->update([
-                    'notif_level' => null
-                ]);
+                $container->update(['notif_level' => null]);
             }
-
-        }
-        // Pertama kali masuk hampir penuh
-        elseif ($levelSekarang === 'hampir_penuh' && $levelSebelumnya === null) {
-
+        } elseif ($levelSekarang === 'hampir_penuh' && $levelSebelumnya === null) {
             $this->kirimNotif(
                 '⚠️ Kontainer Hampir Penuh',
                 "Kontainer {$request->kode_containers} telah mencapai {$request->persen}%"
             );
-
-            $container->update([
-                'notif_level' => 'hampir_penuh'
-            ]);
-
-        }
-        // Pertama kali penuh
-        elseif ($levelSekarang === 'penuh' && $levelSebelumnya !== 'penuh') {
-
+            $container->update(['notif_level' => 'hampir_penuh']);
+        } elseif ($levelSekarang === 'penuh' && $levelSebelumnya !== 'penuh') {
             $this->kirimNotif(
                 '🚨 Kontainer Penuh',
                 "Kontainer {$request->kode_containers} sudah PENUH ({$request->persen}%). Segera dikosongkan!"
             );
-
-            $container->update([
-                'notif_level' => 'penuh'
-            ]);
-
-        }
-        // Turun dari penuh menjadi hampir penuh
-        elseif ($levelSekarang === 'hampir_penuh' && $levelSebelumnya === 'penuh') {
-
-            $container->update([
-                'notif_level' => 'hampir_penuh'
-            ]);
-
+            $container->update(['notif_level' => 'penuh']);
+        } elseif ($levelSekarang === 'hampir_penuh' && $levelSebelumnya === 'penuh') {
+            $container->update(['notif_level' => 'hampir_penuh']);
         }
 
         /*
@@ -120,22 +98,47 @@ class ContainerApiController extends Controller
         */
 
         if ($request->baterai <= 20 && !$container->notif_baterai) {
-
             $this->kirimNotif(
                 '🔋 Baterai Lemah',
                 "Kontainer {$request->kode_containers} baterai tersisa {$request->baterai}%. Segera diisi ulang!"
             );
-
-            $container->update([
-                'notif_baterai' => true
-            ]);
-
+            $container->update(['notif_baterai' => true]);
         } elseif ($request->baterai > 20 && $container->notif_baterai) {
+            $container->update(['notif_baterai' => false]);
+        }
 
-            $container->update([
-                'notif_baterai' => false
-            ]);
+        /*
+        |--------------------------------------------------------------------------
+        | NOTIFIKASI GANGGUAN SENSOR ULTRASONIK (CEGAH SPAM SAMA SEPERTI BATERAI)
+        |--------------------------------------------------------------------------
+        */
 
+        $sensorFields = [
+            1 => 'sensor1_status',
+            2 => 'sensor2_status',
+            3 => 'sensor3_status',
+            4 => 'sensor4_status',
+        ];
+
+        foreach ($sensorFields as $nomor => $field) {
+
+            $statusSensor = $request->$field; // 'ok' atau 'error'
+            $flagKolom = "notif_sensor{$nomor}";
+
+            if ($statusSensor === 'error' && !$container->$flagKolom) {
+
+                $this->kirimNotif(
+                    '⚠️ Gangguan Sensor',
+                    "Sensor {$nomor} pada Kontainer {$request->kode_containers} mengalami gangguan"
+                );
+
+                $container->update([$flagKolom => true]);
+
+            } elseif ($statusSensor === 'ok' && $container->$flagKolom) {
+
+                $container->update([$flagKolom => false]);
+
+            }
         }
 
         return response()->json([
@@ -150,11 +153,6 @@ class ContainerApiController extends Controller
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | METHOD KIRIM NOTIF (DISESUAIKAN UNTUK HIGH PRIORITY WEBPUSH)
-    |--------------------------------------------------------------------------
-    */
     private function kirimNotif($judul, $isi)
     {
         $tokens = User::whereNotNull('fcm_token')
@@ -163,9 +161,7 @@ class ContainerApiController extends Controller
             ->unique();
 
         foreach ($tokens as $token) {
-
             try {
-
                 $message = CloudMessage::withTarget('token', $token)
                     ->withNotification(
                         Notification::create($judul, $isi)
@@ -182,18 +178,13 @@ class ContainerApiController extends Controller
                     ]);
 
                 $this->messaging->send($message);
-
             } catch (\Exception $e) {
-
                 Log::error("FCM Error ({$token}): " . $e->getMessage());
 
-                // Jika token mati/invalid di Firebase, bersihkan otomatis
                 if (str_contains($e->getMessage(), 'Unregistered') || str_contains($e->getMessage(), 'invalid')) {
                     User::where('fcm_token', $token)->update(['fcm_token' => null]);
                 }
-
             }
-
         }
     }
 }

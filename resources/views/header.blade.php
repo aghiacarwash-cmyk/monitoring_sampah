@@ -14,7 +14,8 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
-
+    @vite(['resources/js/app.js'])
+    @livewireStyles
     <script>
         tailwind.config = {
             darkMode: "class",
@@ -117,6 +118,7 @@
         @yield('content')
 
     </main>
+    @livewireScripts
 
 </body>
 

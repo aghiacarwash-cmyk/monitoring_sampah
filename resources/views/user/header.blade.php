@@ -7,7 +7,8 @@
 
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-
+    @vite(['resources/js/app.js'])
+    @livewireStyles
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -116,100 +117,8 @@
         <!-- RIGHT -->
         <div class="flex items-center gap-1 md:gap-3">
 
-            @php
-                use App\Models\Container;
-                $warningPenuh   = Container::with(['kecamatan','kelurahan'])->where('persen', '>=', 80)->get();
-                $warningBaterai = Container::with(['kecamatan','kelurahan'])->where('baterai', '<=', 20)->get();
-                $totalNotif     = $warningPenuh->count() + $warningBaterai->count();
-            @endphp
-
-            <!-- NOTIFICATION -->
-            <div x-data="{ open: false }" class="relative">
-                <button @click="open = !open"
-                    class="relative p-2 rounded-full hover:bg-surface-container-highest transition-colors active:scale-95">
-                    <span class="material-symbols-outlined">notifications</span>
-                    @if($totalNotif > 0)
-                        <span class="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
-                            {{ $totalNotif }}
-                        </span>
-                    @endif
-                </button>
-
-                <!-- Dropdown — full width di mobile -->
-                <div x-show="open" @click.away="open = false" x-transition
-                    class="fixed md:absolute left-2 right-2 md:left-auto md:right-0 top-[68px] md:top-auto md:mt-3 md:w-[400px] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden z-50">
-
-                    <div class="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
-                        <h3 class="font-semibold text-gray-700 text-sm">Notifikasi Kontainer</h3>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs text-gray-400">{{ $totalNotif }} peringatan</span>
-                            <button @click="open = false" class="p-1 rounded-full hover:bg-gray-200 md:hidden">
-                                <span class="material-symbols-outlined text-gray-500" style="font-size:18px">close</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="max-h-[60vh] md:max-h-[450px] overflow-y-auto divide-y divide-gray-100">
-                        <div class="p-4">
-                            <div class="flex items-center gap-2 mb-3">
-                                <span class="material-symbols-outlined text-red-500 text-base">delete</span>
-                                <h4 class="font-semibold text-red-600 text-sm">Kepenuhan ≥ 80%</h4>
-                                <span class="ml-auto text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{{ $warningPenuh->count() }}</span>
-                            </div>
-                            @forelse($warningPenuh as $item)
-                                <div class="mb-2 p-3 rounded-xl bg-red-50 border border-red-100">
-                                    <div class="flex justify-between items-start gap-2">
-                                        <div class="min-w-0">
-                                            <div class="font-semibold text-gray-800 text-sm">{{ $item->kode_containers }}</div>
-                                            <div class="text-xs text-gray-600 truncate">{{ $item->nama_lokasi }}</div>
-                                            @if($item->kecamatan)
-                                                <div class="text-xs text-gray-400">{{ $item->kecamatan->nama_kecamatan }}</div>
-                                            @endif
-                                        </div>
-                                        <div class="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold flex-shrink-0">{{ $item->persen }}%</div>
-                                    </div>
-                                    <div class="mt-2 h-1.5 bg-red-100 rounded-full overflow-hidden">
-                                        <div class="h-full bg-red-500 rounded-full" style="width: {{ $item->persen }}%"></div>
-                                    </div>
-                                </div>
-                            @empty
-                                <div class="text-xs text-gray-400 bg-gray-50 p-3 rounded-xl text-center">Tidak ada kontainer penuh</div>
-                            @endforelse
-                        </div>
-
-                        <div class="p-4">
-                            <div class="flex items-center gap-2 mb-3">
-                                <span class="material-symbols-outlined text-yellow-500 text-base">battery_alert</span>
-                                <h4 class="font-semibold text-yellow-600 text-sm">Baterai ≤ 20%</h4>
-                                <span class="ml-auto text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">{{ $warningBaterai->count() }}</span>
-                            </div>
-                            @forelse($warningBaterai as $item)
-                                <div class="mb-2 p-3 rounded-xl bg-yellow-50 border border-yellow-100">
-                                    <div class="flex justify-between items-start gap-2">
-                                        <div class="min-w-0">
-                                            <div class="font-semibold text-gray-800 text-sm">{{ $item->kode_containers }}</div>
-                                            <div class="text-xs text-gray-600 truncate">{{ $item->nama_lokasi }}</div>
-                                            @if($item->kecamatan)
-                                                <div class="text-xs text-gray-400">{{ $item->kecamatan->nama_kecamatan }}</div>
-                                            @endif
-                                        </div>
-                                        <div class="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full font-bold flex-shrink-0">{{ $item->baterai }}%</div>
-                                    </div>
-                                    <div class="mt-2 h-1.5 bg-yellow-100 rounded-full overflow-hidden">
-                                        <div class="h-full bg-yellow-400 rounded-full" style="width: {{ $item->baterai }}%"></div>
-                                    </div>
-                                </div>
-                            @empty
-                                <div class="text-xs text-gray-400 bg-gray-50 p-3 rounded-xl text-center">Tidak ada baterai lemah</div>
-                            @endforelse
-                        </div>
-                    </div>
-
-                    <div class="px-4 py-3 border-t bg-gray-50 text-center">
-                        <a href="/petugas/monitoring-log" class="text-xs text-teal-600 hover:underline font-medium">Lihat semua history →</a>
-                    </div>
-                </div>
-            </div>
+          <livewire:user-notifikasi/>
+          
 
             <!-- LOGOUT -->
             <form action="{{ route('logout') }}" method="POST">
@@ -278,7 +187,6 @@
         @yield('content')
     </main>
 
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
    <script type="module">
 
@@ -351,3 +259,4 @@
 
         });
     </script>
+    @livewireScripts
