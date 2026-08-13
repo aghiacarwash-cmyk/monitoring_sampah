@@ -1,6 +1,7 @@
+
 {
   "$schema": "https://railway.app/railway.schema.json",
   "deploy": {
-    "startCommand": "php artisan migrate --force && php artisan config:cache && php artisan serve --host=0.0.0.0 --port=$PORT"
+    "startCommand": "if [ \"$PROCESS_TYPE\" = \"reverb\" ]; then php artisan reverb:start --host=0.0.0.0 --port=$PORT; else php artisan migrate --force && php artisan config:cache && php artisan serve --host=0.0.0.0 --port=$PORT; fi"
   }
 }
